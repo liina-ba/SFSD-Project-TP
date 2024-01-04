@@ -103,6 +103,39 @@ if(trouve==true){
    }else
     printf("L'étudiant avec la cle %s n'existe pas.\n", key);
 }
+//Fonction d'insertion :
+void Inserer(fichier *file, char cle[], char nom[], char prenom[]) {
+    Tbloc buffer;
+
+    if (file->entete.nbblocs == 0) {
+        // Si le fichier est vide, ajouter un nouveau bloc
+        file->entete.nbblocs = 1;
+        file->entete.dernierbloc = 0;
+        fseek(file->f, sizeof(Tentete), SEEK_SET);
+        fwrite(&(file->entete), sizeof(Tentete), 1, file->f);
+    } else {
+        // Lire le dernier bloc pour vérifier s'il y a de la place pour un nouvel étudiant
+        LireBloc(file, file->entete.dernierbloc, &buffer);
+        if (buffer.nbeng == 5) {
+            // Si le dernier bloc est plein, ajouter un nouveau bloc
+            file->entete.nbblocs++;
+            file->entete.dernierbloc++;
+            fseek(file->f, 0, SEEK_SET);
+            fwrite(&(file->entete), sizeof(Tentete), 1, file->f);
+        }
+    }
+
+    // Ajouter l'étudiant dans le dernier bloc
+    LireBloc(file, file->entete.dernierbloc, &buffer);
+    strcpy(buffer.eng[buffer.nbeng].cle, cle);
+    strcpy(buffer.eng[buffer.nbeng].nom, nom);
+    strcpy(buffer.eng[buffer.nbeng].prenom, prenom);
+    buffer.eng[buffer.nbeng].eff = true;
+    buffer.nbeng++;
+
+    fseek(file->f, sizeof(Tentete) + file->entete.dernierbloc * sizeof(Tbloc), SEEK_SET);
+    fwrite(&buffer, sizeof(Tbloc), 1, file->f);
+}
 
 int main() {
 
