@@ -72,36 +72,37 @@ void LireBloc(fichier *file, int i, Tbloc *buf) {
     fread(buf, sizeof(Tbloc), 1, file->f);    // Read the block of records into the provided buffer
 }
 
-void Recherche(char key[], fichier *file){
+int Recherche(char key[], fichier *file){
 
   bool trouve=false;
   int i=0;
-
+  int numbloc;
   fseek(file->f, sizeof(Tentete), SEEK_SET);  //Move the file pointer past the header
 
-
   if (file->entete.nbblocs == 0) {
-        printf("Erreur : le fichier est vide.\n");
-        return;
+      printf("Erreur : le fichier est vide.\n");
+      return;
     }
- // Initializes the entire structure to zero
-
 while(i<file->entete.nbblocs && !trouve){
     Tbloc buffer;
-    LireBloc(file,i,&buffer);
-      //buffer contains the bloc with index i
+    LireBloc(file,i,&buffer);    //buffer contains the bloc with index i
     int j=0;
     while(j<buffer.nbeng && !trouve){
       if(strcmp(buffer.eng[j].cle, key) == 0){
-          trouve=true;
+        trouve=true;
+        numbloc=i;
       }else {j++;}
     }
     i++;
 }
 if(trouve==true){
    printf("L'étudiant avec la cle %s existe.\n", key);
-   }else
+   return numbloc;
+  }else{
     printf("L'étudiant avec la cle %s n'existe pas.\n", key);
+    return -1;
+  }
+
 }
 //Fonction d'insertion :
 void Inserer(fichier *file, char cle[], char nom[], char prenom[]) {
@@ -147,23 +148,23 @@ int main() {
         return 1;
     }
 
-    // Writing a block of records (Tbloc) with two student records (Tenreg)
+    // Writing a block with two student records 
     Tbloc block;
     block.nbeng = 2;
 
     strcpy(block.eng[0].cle, "12345");
     strcpy(block.eng[0].nom, "Doe");
     strcpy(block.eng[0].prenom, "John");
-    block.eng[0].eff = true;
+    block.eng[0].eff = false;
 
     strcpy(block.eng[1].cle, "67890");
     strcpy(block.eng[1].nom, "Smith");
     strcpy(block.eng[1].prenom, "Alice");
-    block.eng[1].eff = true;
+    block.eng[1].eff = false;
 
-    // Write the block to the file
-    fwrite(&block, sizeof(Tbloc), 1, sfsd->f);
+    fwrite(&block, sizeof(Tbloc), 1, sfsd->f); // Write the block to the file
 
+    //add another block with one student record 
     Tbloc anotherBlock;
     anotherBlock.nbeng = 1;
     strcpy(anotherBlock.eng[0].cle, "54321");
@@ -174,8 +175,14 @@ int main() {
     fwrite(&anotherBlock, sizeof(Tbloc), 1, sfsd->f);
 
     sfsd->entete.nbblocs=2;
-    Recherche("67890", sfsd);
+    sfsd->entete.dernierbloc=1;
+
+    printf("le numero de bloc est: %d\n", Recherche("12345", sfsd));
+    printf("le numero de bloc est: %d\n", Recherche("67890", sfsd));
+    printf("le numero de bloc est: %d\n", Recherche("54321", sfsd));
+
     Inserer(sfsd,"25486","Salmi","Mohamed");
+    printf("le numero de bloc est: %d", Recherche("25486", sfsd));
     fclose(sfsd->f);
 
     return 0;
