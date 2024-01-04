@@ -175,7 +175,7 @@ int main() {
 
     sfsd->entete.nbblocs=2;
     Recherche("67890", sfsd);
-
+    Inserer(sfsd,"25486","Salmi","Mohamed");
     fclose(sfsd->f);
 
     return 0;
