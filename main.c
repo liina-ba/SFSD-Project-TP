@@ -134,6 +134,13 @@ void Inserer(fichier *file, char cle[], char nom[], char prenom[]) {
     int i=0;
     int blocTrouve = Recherche(cle,file);
     if(blocTrouve == -1){  //l'étudiant n'existe pas//
+        if (file->entete.nbblocs == 0) {
+            // Si le fichier est vide, ajouter un nouveau bloc
+            file->entete.nbblocs = 1;
+            file->entete.dernierbloc = 0;
+            fseek(file->f, 0, SEEK_SET);
+            fwrite(&(file->entete), sizeof(Tentete), 1, file->f);
+        }
      //on va faire la recherche d'un bloc qui contient des vides avant le dernier bloc//
      while(i<file->entete.dernierbloc){
         LireBloc(file,i,&buffer);
