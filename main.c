@@ -62,6 +62,21 @@ fichier* ouvrir(char nomfich[20],char mode)
     return t;
 }
 //************************************************************************************************************************************
+//fonction pour afficher un bloc
+void afficher (Tbloc buffer,int numbloc)
+{
+    printf("Nombre d'enregistrements dans le bloc: %d\n", numbloc);
+    for (int i=0;i<buffer.nbeng;i++)
+    {
+        printf("Enregistrement %d:\n", i + 1);
+    printf("Nom: %s\t", buffer.eng[i].nom);
+    printf("Prenom: %s\t", buffer.eng[i].prenom);
+    printf("Cle: %s\t", buffer.eng[i].cle);
+    printf("\n");
+    }
+ }
+
+//************************************************************************************************************************************
 //fonction pour écrire un bloc dand le fichier
 void EcrireBloc(fichier *file,int i,Tbloc *buffer)
  {
