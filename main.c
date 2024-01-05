@@ -7,7 +7,6 @@ typedef struct Tenreg {
   char nom[20];
   char prenom[20];
   char cle[6];
-  bool eff;
 
  } Tenreg;
 
@@ -29,6 +28,7 @@ typedef struct fichier {
 
 }fichier;
 
+//*******************************************************************************************************
 //function that plays the role of fopen
 fichier* ouvrir(char nomfich[20],char mode)
 {
@@ -61,17 +61,24 @@ fichier* ouvrir(char nomfich[20],char mode)
     }
     return t;
 }
+//************************************************************************************************************************************
+//fonction pour écrire un bloc dand le fichier
+void EcrireBloc(fichier *file,int i,Tbloc *buffer)
+ {
+      fseek(file->f,sizeof(Tentete)+i*sizeof(Tbloc),SEEK_SET);
+        fwrite(buffer,sizeof(Tbloc),1,file);
+ }
 
-
+ //***********************************************************************************************************************************
 // Function to read a block of student records from the file into a buffer
-
 void LireBloc(fichier *file, int i, Tbloc *buf) {
 
     fseek(file->f, sizeof(Tentete) + i * sizeof(Tbloc), SEEK_SET);  // Move the file pointer to the appropriate position for the specified block
     // i is an index that specify which block to read from the file.
     fread(buf, sizeof(Tbloc), 1, file->f);    // Read the block of records into the provided buffer
 }
-
+//*************************************************************************************************************************************
+//fonction qui recherche une clé
 int Recherche(char key[], fichier *file){
 
   bool trouve=false;
@@ -104,6 +111,8 @@ if(trouve==true){
   }
 
 }
+
+//**************************************************************************************************************************************
 //Fonction d'insertion :
 void Inserer(fichier *file, char cle[], char nom[], char prenom[]) {
     Tbloc buffer;
@@ -131,11 +140,59 @@ void Inserer(fichier *file, char cle[], char nom[], char prenom[]) {
     strcpy(buffer.eng[buffer.nbeng].cle, cle);
     strcpy(buffer.eng[buffer.nbeng].nom, nom);
     strcpy(buffer.eng[buffer.nbeng].prenom, prenom);
-    buffer.eng[buffer.nbeng].eff = true;
     buffer.nbeng++;
 
     fseek(file->f, sizeof(Tentete) + file->entete.dernierbloc * sizeof(Tbloc), SEEK_SET);
     fwrite(&buffer, sizeof(Tbloc), 1, file->f);
+}
+
+//*******************************************************************************************************************************
+//fonction suppression
+void suppression( fichier *file,char cle[])
+{ //suppression est physique au lieu de logique pour gagner de l'éspace et se bénifier du fait que le tableau n'est pas ordonné
+    Tbloc buffer;
+ if (file->entete.nbblocs==0)
+ {
+     printf("\nERREUR:le fichier est vide\n");
+ }
+ else {
+        int numbloc=Recherche(cle,file); //recupérer l'indice du bloc contentant cette clé
+
+        if (numbloc<0){ printf("\nil n'existe pas d'etudiant avec cette cle\n");} //verification si la cle existe
+        else {
+        LireBloc(file,numbloc,&buffer);
+        int numeng=-1;
+        int i=0;
+        //chercher la case du bloc où la clé se trouve
+        while (i<buffer.nbeng && numeng==-1)
+        {
+          if (buffer.eng[i].cle==cle)
+          {
+              numeng=i;
+          } else {i++;}
+
+        }
+
+    buffer.eng[numeng]=buffer.eng[buffer.nbeng-1];
+    /*supprimer la case voulu en l'écrasant avec le dernier enregistrement
+    du tableau ,donc au leu de faire des décalages coûteux on va juste déplacer le dernier enregistrement
+    et le supprimer après en juste diminuant la taille du tableau*/
+    buffer.nbeng--;//on diminue la taille du tableau
+
+    if(buffer.nbeng==0) //si le bloc est devenu vide on le supprime en mettant a sa place le dernier bloc
+    {
+     LireBloc(file,file->entete.dernierbloc,&buffer);
+     EcrireBloc(file,numbloc,&buffer);
+     file->entete.dernierbloc--; //effectuer les changements nécéssaire
+     file->entete.nbblocs--;
+     fseek(file->f,0,SEEK_SET);
+     fwrite(&(file->entete),sizeof(Tentete),1,file->f);//écrire l'entête dans le fichier
+    }
+   else{ EcrireBloc(file,numbloc,&buffer); } //écrire le bloc dans son emplacement après avoir éffectué les modifications
+
+            }
+        }
+
 }
 
 int main() {
@@ -149,33 +206,31 @@ int main() {
     }
 
     // Writing a block with two student records 
-    Tbloc block;
-    block.nbeng = 2;
+    Tbloc buffer;
+    buffer.nbeng = 2;
 
-    strcpy(block.eng[0].cle, "12345");
-    strcpy(block.eng[0].nom, "Doe");
-    strcpy(block.eng[0].prenom, "John");
-    block.eng[0].eff = false;
+    strcpy(buffer.eng[0].cle, "12345");
+    strcpy(buffer.eng[0].nom, "Doe");
+    strcpy(buffer.eng[0].prenom, "John");
 
-    strcpy(block.eng[1].cle, "67890");
-    strcpy(block.eng[1].nom, "Smith");
-    strcpy(block.eng[1].prenom, "Alice");
-    block.eng[1].eff = false;
+    strcpy(buffer.eng[1].cle, "67890");
+    strcpy(buffer.eng[1].nom, "Smith");
+    strcpy(buffer.eng[1].prenom, "Alice");
 
-    fwrite(&block, sizeof(Tbloc), 1, sfsd->f); // Write the block to the file
+    EcrireBloc(sfsd->f,0,&buffer);
 
     //add another block with one student record 
-    Tbloc anotherBlock;
-    anotherBlock.nbeng = 1;
-    strcpy(anotherBlock.eng[0].cle, "54321");
-    strcpy(anotherBlock.eng[0].nom, "Doe");
-    strcpy(anotherBlock.eng[0].prenom, "Jane");
-    anotherBlock.eng[0].eff = true;
+  buffer.nbeng = 1;
+    strcpy(buffer.eng[0].cle, "54321");
+    strcpy(buffer.eng[0].nom, "Doe");
+    strcpy(buffer.eng[0].prenom, "Jane");
 
-    fwrite(&anotherBlock, sizeof(Tbloc), 1, sfsd->f);
+    EcrireBloc(sfsd->f,1,&buffer);
 
     sfsd->entete.nbblocs=2;
     sfsd->entete.dernierbloc=1;
+    fseek(sfsd->f,0,SEEK_SET);
+    fwrite(&(sfsd->entete),sizeof(Tentete),1,sfsd->f); //ecrire la nouvelle entete dans le fichier
 
     printf("le numero de bloc est: %d\n", Recherche("12345", sfsd));
     printf("le numero de bloc est: %d\n", Recherche("67890", sfsd));
