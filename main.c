@@ -131,36 +131,58 @@ if(trouve==true){
 //Fonction d'insertion :
 void Inserer(fichier *file, char cle[], char nom[], char prenom[]) {
     Tbloc buffer;
-
-    if (file->entete.nbblocs == 0) {
-        // Si le fichier est vide, ajouter un nouveau bloc
-        file->entete.nbblocs = 1;
-        file->entete.dernierbloc = 0;
-        fseek(file->f, sizeof(Tentete), SEEK_SET);
-        fwrite(&(file->entete), sizeof(Tentete), 1, file->f);
-    } else {
-        // Lire le dernier bloc pour vérifier s'il y a de la place pour un nouvel étudiant
+    int i=0;
+    int blocTrouve = Recherche(cle,file);
+    if(blocTrouve == -1){  //l'étudiant n'existe pas//
+     //on va faire la recherche d'un bloc qui contient des vides avant le dernier bloc//
+     while(i<file->entete.dernierbloc){
+        LireBloc(file,i,&buffer);
+        if(buffer.nbeng < 5){
+            //en insère dans la place trouver
+         strcpy(buffer.eng[buffer.nbeng].cle, cle);
+         strcpy(buffer.eng[buffer.nbeng].nom, nom);
+         strcpy(buffer.eng[buffer.nbeng].prenom, prenom);
+          buffer.nbeng++;
+          EcrireBloc(file, i, &buffer);
+         // Mettre à jour l'entête
+         file->entete.nblibres++;
+         fseek(file->f, 0, SEEK_SET);
+         fwrite(&(file->entete), sizeof(Tentete), 1, file->f);
+         return; // Sortir de la fonction après l'insertion
+        }
+        i++;
+     }
+     //Maintenant si aucun bloc à des vide  n'est trouvé,on insère dans le dernier bloc
         LireBloc(file, file->entete.dernierbloc, &buffer);
+
         if (buffer.nbeng == 5) {
             // Si le dernier bloc est plein, ajouter un nouveau bloc
             file->entete.nbblocs++;
             file->entete.dernierbloc++;
             fseek(file->f, 0, SEEK_SET);
             fwrite(&(file->entete), sizeof(Tentete), 1, file->f);
+
+            // Lire le nouveau dernier bloc
+            LireBloc(file, file->entete.dernierbloc, &buffer);
         }
+
+        // Ajouter l'étudiant dans le dernier bloc
+        strcpy(buffer.eng[buffer.nbeng].cle, cle);
+        strcpy(buffer.eng[buffer.nbeng].nom, nom);
+        strcpy(buffer.eng[buffer.nbeng].prenom, prenom);
+        buffer.nbeng++;
+
+        EcrireBloc(file, file->entete.dernierbloc, &buffer);
+
+        // Mettre à jour l'entête
+        file->entete.nblibres++;
+        fseek(file->f, 0, SEEK_SET);
+        fwrite(&(file->entete), sizeof(Tentete), 1, file->f);
+    } else {
+        // L'étudiant existe déjà donc on affiche
+        printf("L'étudiant avec la cle %s existe déjà dans le bloc %d.\n", cle, blocTrouve);
     }
-
-    // Ajouter l'étudiant dans le dernier bloc
-    LireBloc(file, file->entete.dernierbloc, &buffer);
-    strcpy(buffer.eng[buffer.nbeng].cle, cle);
-    strcpy(buffer.eng[buffer.nbeng].nom, nom);
-    strcpy(buffer.eng[buffer.nbeng].prenom, prenom);
-    buffer.nbeng++;
-
-    fseek(file->f, sizeof(Tentete) + file->entete.dernierbloc * sizeof(Tbloc), SEEK_SET);
-    fwrite(&buffer, sizeof(Tbloc), 1, file->f);
 }
-
 //*******************************************************************************************************************************
 //fonction suppression
 void suppression( fichier *file,char cle[])
