@@ -29,7 +29,6 @@ typedef struct fichier {
 }fichier;
 
 //*******************************************************************************************************
-//function that plays the role of fopen
 fichier* ouvrir(char nomfich[20],char mode)
 {
     fichier *t= malloc(sizeof(fichier));
@@ -56,7 +55,7 @@ fichier* ouvrir(char nomfich[20],char mode)
         }
         break;
 
-    default: printf("Invalid mode '%c' provided. Please use 'A' or 'B'.\n", mode);
+    default: printf("Mode invalide '%c' fourni. Veuillez utiliser 'A' ou 'B'.\n", mode);
       break;
     }
     return t;
@@ -77,7 +76,7 @@ void afficher (Tbloc buffer,int numbloc)
  }
 
 //************************************************************************************************************************************
-//fonction pour écrire un bloc dand le fichier
+//fonction pour écrire un bloc dans le fichier
 void EcrireBloc(fichier *file,int i,Tbloc *buffer)
  {
       fseek(file->f,sizeof(Tentete)+i*sizeof(Tbloc),SEEK_SET);
@@ -85,12 +84,12 @@ void EcrireBloc(fichier *file,int i,Tbloc *buffer)
  }
 
  //***********************************************************************************************************************************
-// Function to read a block of student records from the file into a buffer
+// Fonction pour lire un bloc d'enregistrements  depuis le fichier dans un buffer.
 void LireBloc(fichier *file, int i, Tbloc *buf) {
 
     fseek(file->f, sizeof(Tentete) + i * sizeof(Tbloc), SEEK_SET);  // Move the file pointer to the appropriate position for the specified block
-    // i is an index that specify which block to read from the file.
-    fread(buf, sizeof(Tbloc), 1, file->f);    // Read the block of records into the provided buffer
+     // i est un indice qui spécifie quel bloc lire depuis le fichier.
+    fread(buf, sizeof(Tbloc), 1, file->f);     // Lire le bloc d'enregistrements dans le buffer fourni.
 }
 //*************************************************************************************************************************************
 //fonction qui recherche une clé
@@ -99,15 +98,14 @@ int Recherche(char key[], fichier *file){
   bool trouve=false;
   int i=0;
   int numbloc;
-  fseek(file->f, sizeof(Tentete), SEEK_SET);  //Move the file pointer past the header
+  fseek(file->f, sizeof(Tentete), SEEK_SET); //Déplacez le pointeur de fichier au-delà de l'entete.
 
   if (file->entete.nbblocs == 0) {
-      printf("Erreur : le fichier est vide.\n");
-      return;
+      return -1;
     }
 while(i<file->entete.nbblocs && !trouve){
     Tbloc buffer;
-    LireBloc(file,i,&buffer);    //buffer contains the bloc with index i
+    LireBloc(file,i,&buffer);    //Le buffer contient le bloc avec l'index i.
     int j=0;
     while(j<buffer.nbeng && !trouve){
       if(strcmp(buffer.eng[j].cle, key) == 0){
@@ -118,10 +116,8 @@ while(i<file->entete.nbblocs && !trouve){
     i++;
 }
 if(trouve==true){
-   printf("L'étudiant avec la cle %s existe.\n", key);
    return numbloc;
   }else{
-    printf("L'étudiant avec la cle %s n'existe pas.\n", key);
     return -1;
   }
 
@@ -131,8 +127,9 @@ if(trouve==true){
 //Fonction d'insertion :
 void Inserer(fichier *file, char cle[], char nom[], char prenom[]) {
     Tbloc buffer;
-
-    if (file->entete.nbblocs == 0) {
+    int blocTrouve = Recherche(cle,file);
+    if(blocTrouve == -1){  //l'étudiant n'existe pas//
+      if (file->entete.nbblocs == 0) {
         // Si le fichier est vide, ajouter un nouveau bloc
         file->entete.nbblocs = 1;
         file->entete.dernierbloc = 0;
@@ -169,6 +166,10 @@ void Inserer(fichier *file, char cle[], char nom[], char prenom[]) {
 
     fseek(file->f, sizeof(Tentete) + file->entete.dernierbloc * sizeof(Tbloc), SEEK_SET);
     fwrite(&buffer, sizeof(Tbloc), 1, file->f);
+    }else {
+      // L'étudiant existe déjà donc on affiche
+      printf("L'étudiant avec la cle %s existe déjà dans le bloc %d.\n", cle, blocTrouve);
+    }
 }
 //*******************************************************************************************************************************
 //fonction suppression
@@ -216,54 +217,110 @@ void suppression( fichier *file,char cle[])
 
             }
         }
-
 }
 
 int main() {
 
     fichier* sfsd=ouvrir("sfsd",'B');
+    char cle[6];
+    char nom[20];
+    char prenom[20];
+    Tbloc b,buffer;
+    int blocIndex ;
+    int choice;
 
-    // Check if the file is successfully opened
+     // Vérifiez si le fichier a été ouvert avec succès.
     if (sfsd->f == NULL) {
         printf("Erreur lors de l'ouverture du fichier");
         return 1;
     }
+    
+     // Écrire un bloc avec 3 enregistrement Etudiant
+      buffer.nbeng = 3;
+      strcpy(buffer.eng[0].cle, "12345");
+      strcpy(buffer.eng[0].nom, "Baroud");
+      strcpy(buffer.eng[0].prenom, "lina");
 
-    // Writing a block with two student records 
-    Tbloc buffer;
-    buffer.nbeng = 2;
+      strcpy(buffer.eng[1].cle, "67890");
+      strcpy(buffer.eng[1].nom, "Hammar");
+      strcpy(buffer.eng[1].prenom, "melissa");
 
-    strcpy(buffer.eng[0].cle, "12345");
-    strcpy(buffer.eng[0].nom, "Doe");
-    strcpy(buffer.eng[0].prenom, "John");
+      strcpy(buffer.eng[2].cle, "54321");
+      strcpy(buffer.eng[2].nom, "Athmane");
+      strcpy(buffer.eng[2].prenom, "lina");
 
-    strcpy(buffer.eng[1].cle, "67890");
-    strcpy(buffer.eng[1].nom, "Smith");
-    strcpy(buffer.eng[1].prenom, "Alice");
+      fwrite(&buffer, sizeof(Tbloc), 1, sfsd->f);
 
-    EcrireBloc(sfsd->f,0,&buffer);
+      //ajouter un autre bloc avec 1 enregistrement Etudiant
+      Tbloc buf;
+      buf.nbeng = 1;
+      strcpy(buf.eng[0].cle, "14789");
+      strcpy(buf.eng[0].nom, "salem");
+      strcpy(buf.eng[0].prenom, "hocine");
 
-    //add another block with one student record 
-  buffer.nbeng = 1;
-    strcpy(buffer.eng[0].cle, "54321");
-    strcpy(buffer.eng[0].nom, "Doe");
-    strcpy(buffer.eng[0].prenom, "Jane");
+      fwrite(&buf, sizeof(Tbloc), 1, sfsd->f);
+      sfsd->entete.nbblocs=2;
+      sfsd->entete.dernierbloc=1;
+      fseek(sfsd->f,0,SEEK_SET); // Mettez à jour le fichier après avoir écrit le bloc.
+      fwrite(&(sfsd->entete),sizeof(Tentete),1,sfsd->f); //ecrire la nouvelle entete dans le fichier
 
-    EcrireBloc(sfsd->f,1,&buffer);
+    do {
+        printf("\nMenu:\n");
+        printf("1. Affichage\n");
+        printf("2. Insertion\n");
+        printf("3. Suppression\n");
+        printf("4. Recherche\n");
+        printf("5. Exit\n");
 
-    sfsd->entete.nbblocs=2;
-    sfsd->entete.dernierbloc=1;
-    fseek(sfsd->f,0,SEEK_SET);
-    fwrite(&(sfsd->entete),sizeof(Tentete),1,sfsd->f); //ecrire la nouvelle entete dans le fichier
+        printf("Entrez votre choix: ");
+        scanf("%d", &choice);
 
-    printf("le numero de bloc est: %d\n", Recherche("12345", sfsd));
-    printf("le numero de bloc est: %d\n", Recherche("67890", sfsd));
-    printf("le numero de bloc est: %d\n", Recherche("54321", sfsd));
+        switch (choice) {
+            case 1:
+                printf("\nDonnez le numero de bloc que vous souhaitez afficher: ");
+                scanf("%d",&blocIndex);
+                LireBloc(sfsd, blocIndex, &b);
+                afficher(b, blocIndex);
 
-    Inserer(sfsd,"25486","Salmi","Mohamed");
-    printf("le numero de bloc est: %d", Recherche("25486", sfsd));
+                break;
+            case 2:
+               printf("\nDonnez les donnees de l'étudiant que vous souhaitez inserer : \n");
+               printf("\nEntrez le nom de l'etudiant : ");
+               scanf("%s",&nom);
+               printf("\nEntrez le prenom de l'etudiant :");
+               scanf("%s",&prenom);
+               printf("\nEntrez la cle de l'etudiant: ");
+               scanf("%s",&cle);
+               Inserer(sfsd, cle, nom, prenom);
+
+                break;
+            case 3:
+               printf("\nDonnez la clé de l'étudiant que vous souhaitez supprimer : ");
+               scanf("%s",&cle);
+               suppression(sfsd,cle);
+               afficher(b, blocIndex);
+
+                break;
+            case 4:
+                printf("\nDonnez la clé de l'étudiant que vous souhaitez rechercher : ");
+                scanf("%s",&cle);
+                int blocTrouve = Recherche(cle,sfsd);
+                if(blocTrouve==-1){
+                printf("L'étudiant avec la cle %s n'existe pas.\n", cle);
+                }else{
+                printf("L'étudiant avec la cle %s existe.\n", cle);
+                printf("le numero de bloc est: %d\n",blocTrouve);
+                }
+                break;
+            case 5:
+                printf("Fermeture du programme.\n");
+                break;
+            default:
+                printf("Choix invalide. Veuillez saisir une option valide.\n");
+        }
+    } while (choice != 5);
+
     fclose(sfsd->f);
-
     return 0;
 }
 
