@@ -191,7 +191,7 @@ void suppression( fichier *file,char cle[])
         //chercher la case du bloc où la clé se trouve
         while (i<buffer.nbeng && numeng==-1)
         {
-          if (buffer.eng[i].cle==cle)
+          if (strcmp(buffer.eng[i].cle,cle)==0)
           {
               numeng=i;
           } else {i++;}
@@ -218,10 +218,39 @@ void suppression( fichier *file,char cle[])
             }
         }
 }
+//*******************************************************************************************************************************
+//fonction creation
+void creation(fichier *file, int nbenreg) {
+    Tbloc buffer;
+    int nbbloc = (nbenreg + 4) / 5;  // Calculer le nombre total de blocs nécessaires
+    file->entete.nbblocs = 0;
+    file->entete.dernierbloc = -1;
+    file->entete.nblibres = 0;
+    fseek(file->f, 0, SEEK_SET);
+    fwrite(&(file->entete), sizeof(Tentete), 1, file->f);
+    fseek(file->f, sizeof(Tentete), SEEK_SET);
+    for (int j = 0; j < nbbloc; j++) {
+        int recordsToWrite = (nbenreg > 5) ? 5 : nbenreg;
+        memset(&buffer, 0, sizeof(buffer)); // Clear the buffer
+        buffer.nbeng = recordsToWrite;
+        for (int i = 0; i < recordsToWrite; i++) {
+            sprintf(buffer.eng[i].cle, "%d", j * 5 + i + 1);
+            sprintf(buffer.eng[i].nom, "nomEtudiant%d", j * 5 + i + 1);
+            sprintf(buffer.eng[i].prenom, "prenomEtudiant%d", j * 5 + i + 1);
+        }
+        fwrite(&buffer, sizeof(Tbloc), 1, file->f);
+        file->entete.nbblocs++;
+        file->entete.dernierbloc++;
+        nbenreg -= recordsToWrite; // Ajuster le nombre restant d'enregistrements à écrire
+    }
+    fseek(file->f, 0, SEEK_SET);
+    fwrite(&(file->entete), sizeof(Tentete), 1, file->f);
+}
+
 
 int main() {
 
-    fichier* sfsd=ouvrir("sfsd",'B');
+    fichier* sfsd=ouvrir("sfsd.txt",'B');
     char cle[6];
     char nom[20];
     char prenom[20];
@@ -235,55 +264,38 @@ int main() {
         return 1;
     }
     
-     // Écrire un bloc avec 3 enregistrement Etudiant
-      buffer.nbeng = 3;
-      strcpy(buffer.eng[0].cle, "12345");
-      strcpy(buffer.eng[0].nom, "Baroud");
-      strcpy(buffer.eng[0].prenom, "lina");
-
-      strcpy(buffer.eng[1].cle, "67890");
-      strcpy(buffer.eng[1].nom, "Hammar");
-      strcpy(buffer.eng[1].prenom, "melissa");
-
-      strcpy(buffer.eng[2].cle, "54321");
-      strcpy(buffer.eng[2].nom, "Athmane");
-      strcpy(buffer.eng[2].prenom, "lina");
-
-      fwrite(&buffer, sizeof(Tbloc), 1, sfsd->f);
-
-      //ajouter un autre bloc avec 1 enregistrement Etudiant
-      Tbloc buf;
-      buf.nbeng = 1;
-      strcpy(buf.eng[0].cle, "14789");
-      strcpy(buf.eng[0].nom, "salem");
-      strcpy(buf.eng[0].prenom, "hocine");
-
-      fwrite(&buf, sizeof(Tbloc), 1, sfsd->f);
-      sfsd->entete.nbblocs=2;
-      sfsd->entete.dernierbloc=1;
-      fseek(sfsd->f,0,SEEK_SET); // Mettez à jour le fichier après avoir écrit le bloc.
-      fwrite(&(sfsd->entete),sizeof(Tentete),1,sfsd->f); //ecrire la nouvelle entete dans le fichier
-
-    do {
+     do {
         printf("\nMenu:\n");
-        printf("1. Affichage\n");
-        printf("2. Insertion\n");
-        printf("3. Suppression\n");
-        printf("4. Recherche\n");
-        printf("5. Exit\n");
+        printf("1. Creation\n");
+        printf("2. Affichage\n");
+        printf("3. Insertion\n");
+        printf("4. Suppression\n");
+        printf("5. Recherche\n");
+        printf("6. Exit\n");
 
         printf("Entrez votre choix: ");
         scanf("%d", &choice);
 
         switch (choice) {
             case 1:
-                printf("\nDonnez le numero de bloc que vous souhaitez afficher: ");
-                scanf("%d",&blocIndex);
-                LireBloc(sfsd, blocIndex, &b);
-                afficher(b, blocIndex);
+                printf("\nDonnez le nombre d'enregistrement que vous souhaitez creer: ");
+                scanf("%d",&nbeng);
+                creation(sfsd,nbeng);
+                break;
+            case 2:  
+                do {
+                printf("\nDonnez le numero de bloc que vous souhaitez afficher (0 to %d): ", sfsd->entete.nbblocs - 1);
+                scanf("%d", &blocIndex);
+                if (blocIndex < 0 || blocIndex >= sfsd->entete.nbblocs) {
+                    printf("Numéro de bloc invalide. Veuillez entrer un numéro entre 0 et %d.\n", sfsd->entete.nbblocs - 1);
+                }
+            } while (blocIndex < 0 || blocIndex >= sfsd->entete.nbblocs);  // Repeat until a valid block number is given
+
+              LireBloc(sfsd, blocIndex, &b);
+              afficher(b, b.nbeng);
 
                 break;
-            case 2:
+            case 3:
                printf("\nDonnez les donnees de l'étudiant que vous souhaitez inserer : \n");
                printf("\nEntrez le nom de l'etudiant : ");
                scanf("%s",&nom);
@@ -294,14 +306,16 @@ int main() {
                Inserer(sfsd, cle, nom, prenom);
 
                 break;
-            case 3:
+            case 4:
+
                printf("\nDonnez la clé de l'étudiant que vous souhaitez supprimer : ");
                scanf("%s",&cle);
                suppression(sfsd,cle);
                afficher(b, blocIndex);
 
                 break;
-            case 4:
+            case 5:
+
                 printf("\nDonnez la clé de l'étudiant que vous souhaitez rechercher : ");
                 scanf("%s",&cle);
                 int blocTrouve = Recherche(cle,sfsd);
@@ -311,14 +325,15 @@ int main() {
                 printf("L'étudiant avec la cle %s existe.\n", cle);
                 printf("le numero de bloc est: %d\n",blocTrouve);
                 }
+
                 break;
-            case 5:
+            case 6:
                 printf("Fermeture du programme.\n");
                 break;
             default:
                 printf("Choix invalide. Veuillez saisir une option valide.\n");
         }
-    } while (choice != 5);
+    } while (choice != 6);
 
     fclose(sfsd->f);
     return 0;
