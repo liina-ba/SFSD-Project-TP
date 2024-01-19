@@ -257,6 +257,7 @@ int main() {
     Tbloc b,buffer;
     int blocIndex ;
     int choice;
+    int nbeng;
 
      // Vérifiez si le fichier a été ouvert avec succès.
     if (sfsd->f == NULL) {
