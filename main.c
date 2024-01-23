@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdlib.h>
 
 typedef struct Tenreg {
 
@@ -184,50 +185,58 @@ void Inserer(fichier *file, char cle[], char nom[], char prenom[]) {
 
 //*******************************************************************************************************************************
 //fonction suppression
-void suppression( fichier *file,char cle[])
-{ //suppression est physique au lieu de logique pour gagner de l'éspace et se bénifier du fait que le tableau n'est pas ordonné
-    Tbloc buffer;
- if (file->entete.nbblocs==0)
- {
-     printf("\nERREUR:le fichier est vide\n");
- }
- else {
-        int numbloc=Recherche(cle,file); //recupérer l'indice du bloc contentant cette clé
-
-        if (numbloc<0){ printf("\nil n'existe pas d'etudiant avec cette cle\n");} //verification si la cle existe
-        else {
+void suppression( fichier *file,char cle[]){
+ //suppression est physique au lieu de logique pour gagner de l'éspace et se bénifier du fait que le tableau n'est pas ordonné
+  Tbloc buffer;
+  if (file->entete.nbblocs==0)  {
+    printf("\nERREUR:le fichier est vide\n");
+  }
+  else {
+      int numbloc=Recherche(cle,file); //recupérer l'indice du bloc contentant cette clé
+      if (numbloc<0){ printf("\nil n'existe pas d'etudiant avec cette cle\n");} //verification si la cle existe
+      else {
         LireBloc(file,numbloc,&buffer);
         int numeng=-1;
-        int i=0;
-        //chercher la case du bloc où la clé se trouve
-        while (i<buffer.nbeng && numeng==-1)
-        {
-          if (strcmp(buffer.eng[i].cle,cle)==0)
-          {
-              numeng=i;
-          } else {i++;}
-
+        for (int i = 0; i < buffer.nbeng; i++) {
+         //chercher la case du bloc où la clé se trouve
+          if (strcmp(buffer.eng[i].cle,cle)==0){
+           numeng=i;
+           break;
+          }
         }
-
-    buffer.eng[numeng]=buffer.eng[buffer.nbeng-1];
-    /*supprimer la case voulu en l'écrasant avec le dernier enregistrement
-    du tableau ,donc au leu de faire des décalages coûteux on va juste déplacer le dernier enregistrement
-    et le supprimer après en juste diminuant la taille du tableau*/
-    buffer.nbeng--;//on diminue la taille du tableau
-
-    if(buffer.nbeng==0) //si le bloc est devenu vide on le supprime en mettant a sa place le dernier bloc
-    {
-     LireBloc(file,file->entete.dernierbloc,&buffer);
-     EcrireBloc(file,numbloc,&buffer);
-     file->entete.dernierbloc--; //effectuer les changements nécéssaire
-     file->entete.nbblocs--;
-     fseek(file->f,0,SEEK_SET);
-     fwrite(&(file->entete),sizeof(Tentete),1,file->f);//écrire l'entête dans le fichier
-    }
-   else{ EcrireBloc(file,numbloc,&buffer); } //écrire le bloc dans son emplacement après avoir éffectué les modifications
-
+        if (numeng != -1) {
+        // Décaler les enregistrements et effacer l'emplacement non utilis
+        for (int j = numeng; j < buffer.nbeng; j++) {
+           if (j < buffer.nbeng - 1) {
+            buffer.eng[j] = buffer.eng[j + 1];
+           } else {
+              // Effacer le dernier emplacement après le décalage
+              memset(&buffer.eng[j], 0, sizeof(Tenreg));
             }
         }
+        buffer.nbeng--; //Décrémenter le nombre d'enregistrements dans le bloc
+        // Écrire le bloc mis à jour dans le fichier
+        fseek(file->f, sizeof(Tentete) + numbloc * sizeof(Tbloc), SEEK_SET);
+        fwrite(&buffer, sizeof(Tbloc), 1, file->f);
+        fflush(file->f); // Ensure changes are written to the file
+        // Mettre à jour l'en-tête du fichier si le bloc est maintenant vide et que c'est le dernier bloc
+        if (buffer.nbeng == 0 && numbloc == file->entete.dernierbloc) {
+          file->entete.dernierbloc--;
+          file->entete.nbblocs--;
+          if (file->entete.nbblocs == 0) { // if all records are deleted
+              file->entete.dernierbloc = 0;
+          }
+
+        }
+        // Écrire l'en-tête de fichier mis à jour dans le fichier
+        fseek(file->f, 0, SEEK_SET);
+        fwrite(&(file->entete), sizeof(Tentete), 1, file->f);
+        fflush(file->f); //S'assurer que les modifications sont écrites dans le fichier
+        } else {
+          printf("\nCle non trouvee dans le bloc.\n");
+        }
+      }
+    }
 }
 //*******************************************************************************************************************************
 //fonction creation
@@ -323,7 +332,7 @@ int main() {
                printf("\nDonnez la clé de l'étudiant que vous souhaitez supprimer : ");
                scanf("%s",&cle);
                suppression(sfsd,cle);
-               afficher(b, blocIndex);
+               
 
                 break;
             case 5:

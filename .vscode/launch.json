@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/YAS-Miv/Desktop/sfsdTp/SFSD-Project-TP",
-      "program": "c:/Users/YAS-Miv/Desktop/sfsdTp/SFSD-Project-TP/build/Debug/outDebug",
+      "cwd": "c:/Users/YAS-Miv/Desktop/examTp/SFSD-Project-TP",
+      "program": "c:/Users/YAS-Miv/Desktop/examTp/SFSD-Project-TP/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
